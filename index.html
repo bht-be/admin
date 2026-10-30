@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#ffffff">
+<title>BHT Admin</title>
+<style>
+:root{
+  --bg:#f5f5f7;--card:#fff;--text:#1d1d1f;--muted:#6e6e73;--line:rgba(0,0,0,.08);
+  --flame:#ff4458;--grad:linear-gradient(135deg,#fd267a,#ff6036);--team:linear-gradient(135deg,#7c3aed,#db2777);
+  --red:#ef4444;--green:#1f9d45;--sab:env(safe-area-inset-bottom,0px);--sat:env(safe-area-inset-top,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;min-height:100dvh}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+.muted{color:var(--muted)}
+.brand{font-weight:800;font-size:20px;letter-spacing:-.04em;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;display:inline-flex;align-items:baseline;gap:6px}
+.brand span{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;-webkit-text-fill-color:var(--muted);color:var(--muted)}
+.brand.big{font-size:34px}
+.brand.big span{font-size:13px}
+
+/* login */
+.login{min-height:100dvh;display:grid;place-items:center;padding:20px}
+.lcard{background:var(--card);border-radius:24px;padding:28px 24px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.08);display:flex;flex-direction:column;gap:10px;text-align:center}
+.lcard p{margin-bottom:8px}
+.err{color:var(--red);font-size:13px;min-height:18px;text-align:left}
+
+/* inputs & buttons */
+.inp{width:100%;background:var(--bg);border:2px solid transparent;border-radius:14px;padding:11px 14px;font-size:16px;transition:border-color .15s,background .15s;outline:0}
+.inp:focus{border-color:var(--flame);background:#fff}
+textarea.inp{resize:vertical;min-height:110px;line-height:1.5}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 20px;border-radius:999px;font-weight:700;background:var(--grad);color:#fff;box-shadow:0 8px 20px -8px rgba(253,38,122,.55);transition:transform .12s,opacity .15s}
+.btn:active{transform:scale(.97)}
+.btn[disabled]{opacity:.5;pointer-events:none}
+.btn.sm{padding:6px 12px;font-size:13px;box-shadow:none;background:var(--bg);color:var(--text);font-weight:600}
+.btn.sm.red{color:var(--red);background:rgba(239,68,68,.1)}
+.btn.sm.on{background:rgba(255,68,88,.12);color:var(--flame)}
+.btn.ghost{background:var(--bg);color:var(--text);box-shadow:none}
+.btn.team{background:var(--team);box-shadow:0 8px 20px -8px rgba(124,58,237,.55)}
+
+/* shell */
+.stick{position:sticky;top:0;z-index:20;background:var(--bg)}
+.top{background:rgba(255,255,255,.9);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);padding:calc(10px + var(--sat)) 16px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.who{display:flex;align-items:center;gap:10px;min-width:0}
+.who small{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:36vw}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:10px 16px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;padding:8px 16px;border-radius:999px;font-weight:600;font-size:14px;color:var(--muted);background:rgba(120,120,128,.12)}
+.tab.on{background:#fff;color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.14)}
+main{max-width:760px;margin:0 auto;padding:4px 16px calc(40px + var(--sab))}
+.panel{display:none}
+.panel.on{display:block}
+.bar{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.bar .inp{flex:1}
+.count{font-size:12.5px;color:var(--muted);font-weight:600;margin:2px 2px 10px}
+.empty{text-align:center;color:var(--muted);padding:36px 0}
+
+/* cards */
+.card{background:var(--card);border-radius:20px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.card.dim{opacity:.6}
+.row{display:flex;gap:10px;align-items:center}
+.grow{flex:1;min-width:0}
+.av{width:40px;height:40px;border-radius:12px;background:rgba(255,68,88,.08);display:grid;place-items:center;font-size:22px;flex:none}
+.av.team{background:var(--team);color:#fff;font-weight:800}
+.nm{font-weight:700;display:flex;gap:6px;align-items:center;flex-wrap:wrap;overflow-wrap:anywhere}
+.meta{font-size:12px;color:var(--muted)}
+.tag{font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;background:rgba(255,196,0,.18);color:#8a6100}
+.tag.red{background:rgba(239,68,68,.12);color:var(--red)}
+.tag.team{background:var(--team);color:#fff}
+.body{margin:10px 0;white-space:pre-wrap;overflow-wrap:anywhere;cursor:pointer;font-size:14.5px;line-height:1.55}
+.body.clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.stats{display:flex;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);font-weight:600;margin-bottom:10px}
+.acts{display:flex;gap:6px;flex-wrap:wrap}
+.lbl{display:block;font-size:12px;font-weight:700;color:var(--muted);margin:14px 0 6px}
+.form{background:var(--card);border-radius:20px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.form .btn{margin-top:14px;width:100%}
+.note{display:flex;gap:10px;align-items:center;background:rgba(124,58,237,.07);border:1px solid rgba(124,58,237,.2);border-radius:14px;padding:10px 12px;margin-bottom:6px;font-size:13px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 0}
+.chip{font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;background:rgba(37,99,235,.09);color:#2563eb}
+.replybar{display:flex;justify-content:space-between;align-items:center;gap:8px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.15);border-radius:10px;padding:6px 10px;margin-top:10px;font-size:13px}
+.cm{border-top:1px solid var(--line);padding:10px 0}
+.cm:first-child{border-top:0}
+.cm .hd{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:3px}
+.cm p{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px}
+.cm .to{font-size:11.5px;color:var(--muted);margin-bottom:2px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px}
+.stat{background:var(--card);border-radius:18px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.stat b{display:block;font-size:26px;font-weight:800;letter-spacing:-.03em;color:var(--flame)}
+.stat span{font-size:12px;color:var(--muted);font-weight:600}
+h3{font-size:15px;margin:6px 2px 10px}
+.top3{display:flex;justify-content:space-between;gap:10px;background:var(--card);border-radius:14px;padding:10px 14px;margin-bottom:8px;font-size:13.5px}
+.top3 span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.top3 b{color:var(--flame);flex:none}
+.toast{position:fixed;left:50%;bottom:calc(20px + var(--sab));transform:translateX(-50%);background:#1d1d1f;color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;font-weight:600;z-index:100;max-width:92vw;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.3);animation:tin .2s ease both}
+.toast.bad{background:var(--red)}
+@keyframes tin{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+@media(min-width:700px){.grid{grid-template-columns:repeat(4,1fr)}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<noscript>Enable JavaScript to use the admin.</noscript>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script>
+"use strict";
+/* ================= config ================= */
+const FIREBASE_CONFIG={apiKey:"AIzaSyBkDqsxLQzXHCh7yRq-rN4xXn5Le2dRBas",authDomain:"be-honst.firebaseapp.com",projectId:"be-honst",storageBucket:"be-honst.firebasestorage.app",messagingSenderId:"975779048741",appId:"1:975779048741:web:7306eada473adf9c66becc"};
+const ADMIN_NAME="✦ BHT Team";          // must match ADMIN_DISPLAY_NAME on the public site
+const TZ="Africa/Casablanca";            // times are shown in Moroccan time
+
+/* A separate named app keeps the admin login apart from the anonymous visitor
+   session of the public site, even when both pages share the same origin. */
+const fbApp=firebase.initializeApp(FIREBASE_CONFIG,"bht-admin");
+const auth=firebase.auth(fbApp);
+const db=firebase.firestore(fbApp);
+const FV=firebase.firestore.FieldValue;
+
+/* ================= tiny helpers ================= */
+const appEl=document.getElementById("app");
+function h(tag,props,...kids){
+  const e=document.createElement(tag);
+  for(const k in (props||{})){
+    const v=props[k];
+    if(v==null||v===false)continue;
+    if(k==="class")e.className=v;
+    else if(k==="value")e.value=v;
+    else if(k.slice(0,2)==="on")e.addEventListener(k.slice(2),v);
+    else e.setAttribute(k,v===true?"":v);
+  }
+  for(const kid of kids.flat(Infinity)){
+    if(kid==null||kid===false)continue;
+    e.append(kid.nodeType?kid:document.createTextNode(String(kid)));
+  }
+  return e;
+}
+function btn(label,fn,cls){return h("button",{type:"button",class:"btn sm "+(cls||""),onclick:fn},label);}
+function fmt(ts){
+  try{
+    const d=ts&&ts.toDate?ts.toDate():(ts?new Date(ts):null);
+    if(!d||isNaN(d))return "just now";
+    return d.toLocaleString([],{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",timeZone:TZ});
+  }catch(e){return "";}
+}
+let toastTimer=null;
+function toast(msg,bad){
+  document.querySelectorAll(".toast").forEach(t=>t.remove());
+  const t=h("div",{class:"toast"+(bad?" bad":""),role:"status"},msg);
+  document.body.append(t);
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.remove(),bad?4500:2200);
+}
+function errMsg(e){
+  if(e&&e.code==="permission-denied")return "Permission denied: this account isn't allowed by your Firestore rules.";
+  return (e&&e.message)||String(e);
+}
+async function run(okMsg,fn){
+  try{await fn();if(okMsg)toast(okMsg);return true;}
+  catch(e){console.error(e);toast(errMsg(e),true);return false;}
+}
+
+/* ================= state ================= */
+const S={tab:"posts",posts:[],q:"",cpost:"",comments:[],reply:null,chat:[],presence:[],offset:0,unsubs:[],timers:[],selSig:""};
+const now=()=>Date.now()+S.offset;
+const presOn=u=>{const t=u&&u.ts&&u.ts.toMillis?u.ts.toMillis():0;if(!t||u.online===false)return false;const d=now()-t;return d<75000&&d>-120000;};
+async function syncClock(){
+  try{
+    const t0=Date.now();
+    const r=await auth.currentUser.getIdTokenResult(true);
+    const t1=Date.now();
+    const sv=Date.parse(r.issuedAtTime);
+    if(sv)S.offset=sv+500-(t0+t1)/2;
+  }catch(e){}
+}
+function stopAll(){
+  S.unsubs.forEach(u=>{try{u();}catch(e){}});S.unsubs=[];
+  S.timers.forEach(clearInterval);S.timers=[];
+  S.posts=[];S.comments=[];S.chat=[];S.presence=[];S.cpost="";S.reply=null;S.selSig="";
+}
+function listen(q,onData){
+  const un=q.onSnapshot(onData,e=>{console.error(e);toast(errMsg(e),true);});
+  S.unsubs.push(un);
+  return un;
+}
+
+/* ================= login ================= */
+function showLogin(msg){
+  stopAll();
+  const email=h("input",{class:"inp",type:"email",placeholder:"Email",autocomplete:"username",inputmode:"email",autocapitalize:"off"});
+  const pw=h("input",{class:"inp",type:"password",placeholder:"Password",autocomplete:"current-password"});
+  const err=h("div",{class:"err",role:"alert"},msg||"");
+  const go=h("button",{class:"btn",type:"button"},"Sign in");
+  async function submit(){
+    const e=email.value.trim(),p=pw.value;
+    if(!e||!p){err.textContent="Enter email and password";return;}
+    go.disabled=true;err.textContent="";
+    try{await auth.signInWithEmailAndPassword(e,p);}
+    catch(x){
+      const c=x&&x.code;
+      err.textContent=(c==="auth/invalid-credential"||c==="auth/wrong-password"||c==="auth/user-not-found"||c==="auth/invalid-email")?"Wrong email or password"
+        :c==="auth/too-many-requests"?"Too many attempts, try again later"
+        :c==="auth/network-request-failed"?"No connection":errMsg(x);
+      go.disabled=false;
+    }
+  }
+  go.addEventListener("click",submit);
+  [email,pw].forEach(i=>i.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();submit();}}));
+  appEl.replaceChildren(h("div",{class:"login"},h("div",{class:"lcard"},
+    h("div",{class:"brand big"},"BHT",h("span",null,"admin")),
+    h("p",{class:"muted"},"Sign in to manage the site"),
+    email,pw,err,go)));
+}
+
+/* ================= app shell ================= */
+const TABS=[["posts","Posts"],["new","New post"],["comments","Comments"],["chat","Chat"],["stats","Stats"]];
+let panels={},tabBtns={};
+let postList,postCount,cSel,cList,cText,chips,replyBar,chatList,chatText,statsEl;
+
+function setTab(t){
+  S.tab=t;
+  for(const k in panels){panels[k].classList.toggle("on",k===t);tabBtns[k].classList.toggle("on",k===t);}
+  if(t==="stats")renderStats();
+  window.scrollTo({top:0});
+}
+
+function startApp(user){
+  stopAll();
+  panels={posts:buildPosts(),new:buildNew(),comments:buildComments(),chat:buildChat(),stats:buildStats()};
+  tabBtns={};
+  TABS.forEach(([k,l])=>{tabBtns[k]=h("button",{type:"button",class:"tab",onclick:()=>setTab(k)},l);});
+  appEl.replaceChildren(
+    h("div",{class:"stick"},
+      h("header",{class:"top"},
+        h("div",{class:"brand"},"BHT",h("span",null,"admin")),
+        h("div",{class:"who"},h("small",null,user.email||""),btn("Sign out",()=>auth.signOut()))),
+      h("nav",{class:"tabs"},TABS.map(([k])=>tabBtns[k]))),
+    h("main",null,TABS.map(([k])=>panels[k])));
+  setTab(S.tab);
+
+  syncClock().then(()=>{if(S.tab==="stats")renderStats();});
+  S.timers.push(setInterval(()=>{if(S.tab==="stats")renderStats();},20000));
+  S.timers.push(setInterval(syncClock,600000));
+
+  listen(db.collection("posts").orderBy("timestamp","desc").limit(500),snap=>{
+    S.posts=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderPosts();fillSelect();if(S.tab==="stats")renderStats();
+  });
+  listen(db.collection("chat_messages").orderBy("ts","desc").limit(100),snap=>{
+    S.chat=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderChat();
+  });
+  listen(db.collection("chat_presence").orderBy("ts","desc").limit(150),snap=>{
+    S.presence=snap.docs.map(d=>({uid:d.id,...d.data()}));
+    if(S.tab==="stats")renderStats();
+  });
+}
+
+/* ================= POSTS ================= */
+function buildPosts(){
+  const q=h("input",{class:"inp",type:"search",placeholder:"🔍  Search posts, names, cities…",oninput:e=>{S.q=e.target.value;renderPosts();}});
+  postCount=h("div",{class:"count"});
+  postList=h("div");
+  return h("section",{class:"panel"},
+    h("div",{class:"bar"},q,btn("🔄 Reset order",resetOrder)),
+    postCount,postList);
+}
+function renderPosts(){
+  const q=S.q.trim().toLowerCase();
+  let list=S.posts.slice().sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));
+  if(q)list=list.filter(p=>[p.content,p.name,p.city].some(x=>String(x||"").toLowerCase().includes(q)));
+  postCount.textContent=list.length+" of "+S.posts.length+" posts · pinned first, then newest";
+  postList.replaceChildren(...(list.length?list.map(postCard):[h("p",{class:"empty"},"No posts.")]));
+}
+function postCard(p){
+  const r=p.reactions||{};
+  const n=k=>(r[k]||[]).length;
+  const ref=db.collection("posts").doc(p.id);
+  return h("article",{class:"card"+(p.hidden?" dim":"")},
+    h("div",{class:"row"},
+      h("div",{class:"av"+(p.isAdminPost?" team":"")},p.isAdminPost?"✦":(p.avatar||"🙂")),
+      h("div",{class:"grow"},
+        h("div",{class:"nm"},p.isAdminPost?"✦ BHT Team":(p.name||"?"),
+          p.pinned&&h("span",{class:"tag"},"📌 pinned"),
+          p.hidden&&h("span",{class:"tag red"},"🙈 hidden")),
+        h("div",{class:"meta"},[p.city&&"📍 "+p.city,fmt(p.timestamp)].filter(Boolean).join(" · ")))),
+    h("p",{class:"body clamp",title:"Tap to expand",onclick:e=>e.currentTarget.classList.toggle("clamp")},p.content||""),
+    h("div",{class:"stats"},h("span",null,"👁 "+(p.viewCount||0)),h("span",null,"👍 "+n("like")),h("span",null,"😂 "+n("haha")),h("span",null,"❤️ "+n("heart")),h("span",null,"💬 "+(p.commentCount||0))),
+    h("div",{class:"acts"},
+      btn(p.pinned?"📌 Unpin":"📌 Pin",()=>run(p.pinned?"Post unpinned":"Post pinned 📌",()=>ref.update({pinned:!p.pinned})),p.pinned?"on":""),
+      btn(p.hidden?"👁 Show":"🙈 Hide",()=>run(p.hidden?"Post is visible again":"Post hidden",()=>ref.update({hidden:!p.hidden})),p.hidden?"red":""),
+      btn("💬 Comments",()=>{selectCommentsPost(p.id);cSel.value=p.id;setTab("comments");}),
+      btn("✏️ Views",()=>editViews(p)),
+      btn("👍",()=>editReaction(p,"like")),btn("😂",()=>editReaction(p,"haha")),btn("❤️",()=>editReaction(p,"heart")),
+      btn("🗑 Delete",()=>deletePost(p),"red")));
+}
+function editViews(p){
+  const v=prompt("Set view count",String(p.viewCount||0));
+  if(v===null)return;
+  const n=parseInt(v,10);
+  if(!(n>=0))return toast("Enter a number ≥ 0",true);
+  run("Views updated",()=>db.collection("posts").doc(p.id).update({viewCount:n}));
+}
+function editReaction(p,type){
+  const emoji={like:"👍",haha:"😂",heart:"❤️"}[type];
+  const arr=(p.reactions&&p.reactions[type])||[];
+  const real=arr.filter(x=>String(x).indexOf("admin_pad_")!==0);
+  const v=prompt("Set "+emoji+" count (real reactions: "+real.length+")",String(arr.length));
+  if(v===null)return;
+  const n=parseInt(v,10);
+  if(!(n>=0))return toast("Enter a number ≥ 0",true);
+  if(n<real.length)return toast("Can't go below the real count ("+real.length+")",true);
+  const next=real.concat(Array.from({length:n-real.length},(_,i)=>"admin_pad_"+i));
+  run(emoji+" updated",()=>db.collection("posts").doc(p.id).update({["reactions."+type]:next}));
+}
+async function deletePost(p){
+  if(!confirm("Delete this post by "+(p.name||"?")+"?\nIts comments will be deleted too."))return;
+  run("Post deleted",async()=>{
+    const ref=db.collection("posts").doc(p.id);
+    try{
+      for(;;){
+        const snap=await ref.collection("comments").limit(400).get();
+        if(snap.empty)break;
+        const b=db.batch();snap.docs.forEach(d=>b.delete(d.ref));await b.commit();
+      }
+    }catch(e){console.warn("comments not fully deleted",e);}
+    await ref.delete();
+    if(S.cpost===p.id)selectCommentsPost("");
+  });
+}
+async function resetOrder(){
+  const withOrder=S.posts.filter(p=>p.order!==undefined);
+  if(!withOrder.length)return toast("Order is already by date");
+  if(!confirm("Reset all post ordering to newest-first by date?"))return;
+  run("Order reset to date ✓",async()=>{
+    for(let i=0;i<withOrder.length;i+=400){
+      const b=db.batch();
+      withOrder.slice(i,i+400).forEach(p=>b.update(db.collection("posts").doc(p.id),{order:FV.delete()}));
+      await b.commit();
+    }
+  });
+}
+
+/* ================= NEW POST ================= */
+function buildNew(){
+  const text=h("textarea",{class:"inp",placeholder:"Write the admin post…",style:"min-height:150px"});
+  const city=h("input",{class:"inp",placeholder:"e.g. Casablanca",maxlength:"40"});
+  const go=h("button",{class:"btn team",type:"button"},"✦ Publish as admin");
+  go.addEventListener("click",async()=>{
+    const content=text.value.trim();
+    if(!content)return;
+    go.disabled=true;
+    const ok=await run("✦ Admin post published!",async()=>{
+      const ref=await db.collection("posts").add({
+        name:ADMIN_NAME,content,city:city.value.trim(),avatar:"✦",isAdminPost:true,authorUid:"admin",
+        timestamp:FV.serverTimestamp(),viewCount:0,viewers:[],reactions:{like:[],haha:[],heart:[]},order:0,pinned:false
+      });
+      try{await db.collection("broadcasts").add({type:"new_post",postId:ref.id,authorUid:"admin",postAuthorName:ADMIN_NAME,preview:content.slice(0,120),ts:FV.serverTimestamp()});}catch(e){console.warn(e);}
+    });
+    go.disabled=false;
+    if(ok){text.value="";city.value="";setTab("posts");}
+  });
+  return h("section",{class:"panel"},
+    h("div",{class:"form"},
+      h("div",{class:"note"},h("div",{class:"av team"},"✦"),h("div",null,h("b",null,ADMIN_NAME),h("div",{class:"meta"},"This post appears with the admin badge"))),
+      h("label",{class:"lbl"},"📝 Post content"),text,
+      h("label",{class:"lbl"},"📍 City (optional)"),city,
+      go));
+}
+
+/* ================= COMMENTS ================= */
+function buildComments(){
+  cSel=h("select",{class:"inp",onchange:e=>selectCommentsPost(e.target.value)});
+  cList=h("div",{class:"card",style:"display:none"});
+  cText=h("textarea",{class:"inp",placeholder:"Write your admin comment… (tap a name to tag)",style:"min-height:90px"});
+  chips=h("div",{class:"chips"});
+  replyBar=h("div",{class:"replybar",style:"display:none"});
+  const go=h("button",{class:"btn team",type:"button"},"✦ Post as admin");
+  go.addEventListener("click",postComment);
+  return h("section",{class:"panel"},
+    h("label",{class:"lbl",style:"margin-top:2px"},"Select post"),cSel,
+    h("div",{style:"height:12px"}),cList,
+    h("div",{class:"form",id:"cform"},
+      h("label",{class:"lbl",style:"margin-top:0"},"Comment as "+ADMIN_NAME),
+      replyBar,cText,chips,go));
+}
+function fillSelect(){
+  const sig=S.posts.map(p=>p.id+"|"+(p.name||"")+"|"+String(p.content||"").slice(0,60)).join("¦");
+  if(sig===S.selSig)return;
+  S.selSig=sig;
+  cSel.replaceChildren(h("option",{value:""},"— Choose a post —"),
+    ...S.posts.map(p=>h("option",{value:p.id},(p.name||"?")+": "+String(p.content||"").replace(/\s+/g," ").slice(0,60))));
+  cSel.value=S.cpost||"";
+}
+let commentsUn=null;
+function selectCommentsPost(id){
+  S.cpost=id||"";S.comments=[];S.reply=null;
+  if(commentsUn){try{commentsUn();}catch(e){}S.unsubs=S.unsubs.filter(u=>u!==commentsUn);commentsUn=null;}
+  renderComments();
+  if(!S.cpost)return;
+  commentsUn=listen(db.collection("posts").doc(S.cpost).collection("comments").orderBy("timestamp","asc"),snap=>{
+    S.comments=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderComments();
+  });
+}
+function renderComments(){
+  const post=S.posts.find(p=>p.id===S.cpost);
+  if(!S.cpost){cList.style.display="none";cList.replaceChildren();chips.replaceChildren();setReply(null);return;}
+  cList.style.display="";
+  cList.replaceChildren(
+    h("h3",{style:"margin-top:0"},"Comments ("+S.comments.length+")"),
+    ...(S.comments.length?S.comments.map(commentRow):[h("p",{class:"empty",style:"padding:14px 0"},"No comments yet.")]));
+  const names=[];
+  if(post&&post.name&&!post.isAdminPost)names.push(post.name);
+  S.comments.forEach(c=>{if(!c.isAdmin&&c.name&&!names.includes(c.name))names.push(c.name);});
+  chips.replaceChildren(...names.map(nm=>h("button",{type:"button",class:"chip",onclick:()=>{
+    const v=cText.value;cText.value=(v&&!/\s$/.test(v)?v+" ":v)+"@"+nm+" ";cText.focus();
+  }},"@"+nm)));
+}
+function commentRow(c){
+  return h("div",{class:"cm"},
+    c.replyToName&&h("div",{class:"to"},"↪ replying to @"+c.replyToName),
+    h("div",{class:"hd"},
+      h("div",{class:"nm"},c.isAdmin?h("span",{class:"tag team"},"✦ BHT Team"):(c.name||"?"),h("span",{class:"meta",style:"font-weight:400"},fmt(c.timestamp))),
+      h("div",{class:"acts"},
+        !c.isAdmin&&btn("↩ Reply",()=>setReply({id:c.id,name:c.name})),
+        btn("🗑",()=>deleteComment(c),"red"))),
+    h("p",null,c.text||""));
+}
+function setReply(r){
+  S.reply=r;
+  if(!r){replyBar.style.display="none";replyBar.replaceChildren();return;}
+  replyBar.style.display="";
+  replyBar.replaceChildren(h("span",null,"Replying to ",h("b",null,"@"+r.name)),btn("✕",()=>setReply(null)));
+  const pre="@"+r.name+" ";
+  if(!cText.value.startsWith(pre))cText.value=pre+cText.value;
+  cText.focus();
+  document.getElementById("cform").scrollIntoView({behavior:"smooth",block:"center"});
+}
+async function postComment(){
+  const text=cText.value.trim();
+  if(!S.cpost)return toast("Choose a post first",true);
+  if(!text)return;
+  const id=S.cpost,rp=S.reply;
+  run("Admin comment added ✓",async()=>{
+    const ref=db.collection("posts").doc(id);
+    await ref.collection("comments").add({name:ADMIN_NAME,text,timestamp:FV.serverTimestamp(),isAdmin:true,replyToId:rp?rp.id:null,replyToName:rp?rp.name:null});
+    await ref.update({commentCount:FV.increment(1)});
+    cText.value="";setReply(null);
+  });
+}
+function deleteComment(c){
+  if(!confirm("Delete this comment?"))return;
+  const id=S.cpost;
+  run("Comment deleted",async()=>{
+    const ref=db.collection("posts").doc(id);
+    await ref.collection("comments").doc(c.id).delete();
+    await ref.update({commentCount:FV.increment(-1)});
+  });
+}
+
+/* ================= CHAT ================= */
+function buildChat(){
+  chatText=h("textarea",{class:"inp",maxlength:"500",placeholder:"Send a message to the general chat as BHT Team…",style:"min-height:80px"});
+  chatList=h("div");
+  const go=h("button",{class:"btn team",type:"button"},"✦ Send as BHT Team");
+  go.addEventListener("click",async()=>{
+    const body=chatText.value.replace(/\n{3,}/g,"\n\n").trim();
+    if(!body)return;
+    go.disabled=true;
+    const ok=await run("Sent to chat ✓",()=>db.collection("chat_messages").add({
+      uid:auth.currentUser.uid,name:"BHT Team",emoji:"✦",isTeam:true,mentions:[],text:body.slice(0,500),
+      ts:FV.serverTimestamp(),reactions:{},viewers:[],viewCount:0,replyTo:null}));
+    go.disabled=false;
+    if(ok)chatText.value="";
+  });
+  return h("section",{class:"panel"},
+    h("div",{class:"form",style:"margin-bottom:14px"},chatText,go),
+    h("div",{class:"count"},"Latest 100 messages · newest first"),
+    chatList);
+}
+function renderChat(){
+  chatList.replaceChildren(...(S.chat.length?S.chat.map(m=>h("div",{class:"card"+(m.removed?" dim":"")},
+    h("div",{class:"row"},
+      h("div",{class:"av"+(m.isTeam?" team":"")},m.emoji||"🙂"),
+      h("div",{class:"grow"},
+        h("div",{class:"nm"},m.isTeam?"✦ BHT Team":(m.name||"?"),m.removed&&h("span",{class:"tag red"},"removed")),
+        h("div",{class:"meta"},fmt(m.ts)+" · ◉ "+(m.viewCount||0)+(Object.values(m.reactions||{}).flat().length?" · "+Object.values(m.reactions||{}).flat().length+" reactions":""))),
+      !m.removed&&btn("⌫ Remove",()=>removeChatMsg(m),"red")),
+    !m.removed&&h("p",{class:"body",style:"cursor:default;margin-bottom:0"},m.text||""))):[h("p",{class:"empty"},"No messages yet.")]));
+}
+function removeChatMsg(m){
+  if(!confirm("Remove this message for everyone?"))return;
+  run("Message removed",()=>db.collection("chat_messages").doc(m.id).update({removed:true,removedBy:"admin",text:"",reactions:{}}));
+}
+
+/* ================= STATS ================= */
+function buildStats(){statsEl=h("div");return h("section",{class:"panel"},statsEl);}
+function renderStats(){
+  const P=S.posts;
+  const sum=f=>P.reduce((a,p)=>a+f(p),0);
+  const online=S.presence.filter(presOn).length;
+  const cards=[
+    ["📝","Total posts",P.length],["👁️","Total views",sum(p=>p.viewCount||0)],
+    ["👍","Total likes",sum(p=>(p.reactions&&p.reactions.like||[]).length)],["❤️","Total hearts",sum(p=>(p.reactions&&p.reactions.heart||[]).length)],
+    ["😂","Total hahas",sum(p=>(p.reactions&&p.reactions.haha||[]).length)],["💬","Total comments",sum(p=>p.commentCount||0)],
+    ["📌","Pinned posts",P.filter(p=>p.pinned).length],["🙈","Hidden posts",P.filter(p=>p.hidden).length],
+    ["🟢","Online now",online],["👥","Chat profiles",S.presence.filter(u=>u.name).length]
+  ];
+  const top=P.slice().sort((a,b)=>(b.viewCount||0)-(a.viewCount||0)).slice(0,3);
+  statsEl.replaceChildren(
+    h("div",{class:"grid"},cards.map(([i,l,v])=>h("div",{class:"stat"},h("b",null,v.toLocaleString()),h("span",null,i+" "+l)))),
+    h("h3",null,"Top 3 most viewed posts"),
+    ...top.map(p=>h("div",{class:"top3"},h("span",null,h("b",{style:"color:inherit"},(p.name||"?")+": "),String(p.content||"").replace(/\s+/g," ").slice(0,50)),h("b",null,"👁 "+(p.viewCount||0)))));
+}
+
+/* ================= boot ================= */
+auth.onAuthStateChanged(user=>{
+  if(user&&!user.isAnonymous){startApp(user);}
+  else if(user){auth.signOut();}   // an anonymous session is never an admin
+  else{showLogin();}
+});
+</script>
+</body>
+</html>
