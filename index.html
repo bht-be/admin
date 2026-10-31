@@ -40,6 +40,7 @@ textarea.inp{resize:vertical;min-height:110px;line-height:1.5}
 .btn.sm.red{color:var(--red);background:rgba(239,68,68,.1)}
 .btn.sm.on{background:rgba(255,68,88,.12);color:var(--flame)}
 .btn.ghost{background:var(--bg);color:var(--text);box-shadow:none}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;word-break:break-all}
 .tag.green{background:rgba(31,157,69,.14);color:var(--green)}
 .btn.team{background:var(--team);box-shadow:0 8px 20px -8px rgba(124,58,237,.55)}
 
@@ -122,7 +123,7 @@ const TZ="Africa/Casablanca";            // times are shown in Moroccan time
 if(typeof firebase==="undefined"){document.getElementById("app").innerHTML='<div class="login"><div class="lcard"><div class="brand big">BHT<span>admin</span></div><p class="muted">Can’t connect right now. Check your internet connection, turn off any blocker, then refresh.</p><button class="btn" type="button" onclick="location.reload()">Refresh</button></div></div>';throw new Error("offline");}
 const fbApp=firebase.initializeApp(FIREBASE_CONFIG,"bht-admin");
 const auth=firebase.auth(fbApp);
-const db=firebase.firestore(fbApp);
+const db=firebase.firestore(fbApp);try{db.settings({experimentalAutoDetectLongPolling:true,merge:true});}catch(e){}
 const FV=firebase.firestore.FieldValue;
 
 /* ================= tiny helpers ================= */
@@ -169,7 +170,7 @@ async function run(okMsg,fn){
 }
 
 /* ================= state ================= */
-const S={unf:false,tab:"posts",posts:[],q:"",cpost:"",comments:[],reply:null,chat:[],presence:[],offset:0,unsubs:[],timers:[],selSig:""};
+const S={unf:false,ur:[],urep:[],uq:"",uview:"msgs",tab:"posts",posts:[],q:"",cpost:"",comments:[],reply:null,chat:[],presence:[],offset:0,unsubs:[],timers:[],selSig:""};
 const now=()=>Date.now()+S.offset;
 const presOn=u=>{const t=u&&u.ts&&u.ts.toMillis?u.ts.toMillis():0;if(!t||u.online===false)return false;const d=now()-t;return d<75000&&d>-120000;};
 async function syncClock(){
@@ -203,7 +204,10 @@ function showLogin(msg){
     const e=email.value.trim(),p=pw.value;
     if(!e||!p){err.textContent="Enter email and password";return;}
     go.disabled=true;err.textContent="";
-    try{await auth.signInWithEmailAndPassword(e,p);}
+    try{
+      try{await auth.signInWithEmailAndPassword(e,p);}
+      catch(x0){if(x0&&x0.code==="auth/network-request-failed"){err.textContent="Retrying…";await new Promise(r=>setTimeout(r,1500));await auth.signInWithEmailAndPassword(e,p);}else throw x0;}
+    }
     catch(x){
       const c=x&&x.code;
       err.textContent=(c==="auth/invalid-credential"||c==="auth/wrong-password"||c==="auth/user-not-found"||c==="auth/invalid-email")?"Wrong email or password"
@@ -261,6 +265,12 @@ function startApp(user){
   listen(db.collection("site_settings").doc("unfiltered"),snap=>{
     S.unf=!!(snap.exists&&snap.data().visible===true);
     renderUnf();
+  });
+  listen(db.collection("unfiltered_responses").orderBy("createdAt","desc").limit(300),snap=>{
+    S.ur=snap.docs.map(d=>({id:d.id,...d.data()}));renderUnf();
+  });
+  listen(db.collection("unfiltered_reports").orderBy("createdAt","desc").limit(200),snap=>{
+    S.urep=snap.docs.map(d=>({id:d.id,...d.data()}));renderUnf();
   });
   listen(db.collection("chat_presence").orderBy("ts","desc").limit(150),snap=>{
     S.presence=snap.docs.map(d=>({uid:d.id,...d.data()}));
@@ -506,25 +516,105 @@ function removeChatMsg(m){
   run("Message removed",()=>db.collection("chat_messages").doc(m.id).update({removed:true,removedBy:"admin",text:"",reactions:{}}));
 }
 
-/* ================= UNFILTERED (show / hide) ================= */
-let unfEl=null;
-function buildUnf(){unfEl=h("div");renderUnf();return h("section",{class:"panel"},unfEl);}
+/* ================= UNFILTERED (show / hide + monitor everything) ================= */
+let unfTop=null,unfTabs=null,unfList=null,unfQ=null;
+const shortId=id=>String(id||"?").slice(0,8)+"…";
+function inviteLink(id){const u=new URL("unfiltered.html",location.href);u.search="";u.hash="";u.searchParams.set("bht_unfiltered",id);return u.toString();}
+function copyTxt(txt,msg){
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(()=>toast(msg||"Copied ✓")).catch(()=>prompt("Copy:",txt));
+  else prompt("Copy:",txt);
+}
+function buildUnf(){
+  unfTop=h("div");unfTabs=h("div",{class:"tabs",style:"padding:12px 0 6px"});unfList=h("div");
+  unfQ=h("input",{class:"inp",type:"search",placeholder:"🔍  Search words, IDs, categories…",oninput:e=>{S.uq=e.target.value;renderUnf();}});
+  const sec=h("section",{class:"panel"},unfTop,h("div",{style:"height:14px"}),unfQ,unfTabs,unfList);
+  renderUnf();
+  return sec;
+}
 function renderUnf(){
-  if(!unfEl)return;
-  const on=S.unf===true;
+  if(!unfTop)return;
+  const on=S.unf===true,R=S.ur||[],P=S.urep||[];
   const go=h("button",{class:"btn "+(on?"ghost":"team"),type:"button"},on?"🙈 Hide Unfiltered":"👁 Show Unfiltered");
   go.addEventListener("click",async()=>{
     go.disabled=true;
     await run(on?"Unfiltered is now hidden":"Unfiltered is now visible ✓",()=>db.collection("site_settings").doc("unfiltered").set({visible:!on,updatedAt:FV.serverTimestamp()},{merge:true}));
     go.disabled=false;
   });
-  unfEl.replaceChildren(h("div",{class:"form"},
-    h("div",{class:"row"},
-      h("div",{class:"av"},"🫣"),
-      h("div",{class:"grow"},
-        h("div",{class:"nm"},"BHT Unfiltered",h("span",{class:"tag "+(on?"green":"red")},on?"🟢 visible":"🙈 hidden")),
-        h("div",{class:"meta"},on?"The link is shown in the site header and the page is open.":"The link is removed from the site header and the page shows a “not available” message."))),
-    go));
+  const stats=[["💌","Messages",R.length],["🔗","Active links",new Set(R.map(x=>x.recipientId)).size],["🕵️","Senders",new Set(R.map(x=>x.senderUid)).size],["🚩","Reports",P.length]];
+  unfTop.replaceChildren(
+    h("div",{class:"form"},
+      h("div",{class:"row"},
+        h("div",{class:"av"},"🫣"),
+        h("div",{class:"grow"},
+          h("div",{class:"nm"},"BHT Unfiltered",h("span",{class:"tag "+(on?"green":"red")},on?"🟢 visible":"🙈 hidden")),
+          h("div",{class:"meta"},on?"The link is shown in the site header and the page is open.":"The link is removed from the site header and the page shows a “not available” message."))),
+      go),
+    h("div",{class:"grid",style:"margin:14px 0 0"},stats.map(([i,l,v])=>h("div",{class:"stat"},h("b",null,v.toLocaleString()),h("span",null,i+" "+l)))));
+
+  const views=[["msgs","Messages ("+R.length+")"],["links","Links"],["reps","Reports ("+P.length+")"]];
+  const view=S.uview||"msgs";
+  unfTabs.replaceChildren(...views.map(([k,l])=>h("button",{type:"button",class:"tab"+(k===view?" on":""),onclick:()=>{S.uview=k;renderUnf();}},l)));
+
+  const q=(S.uq||"").trim().toLowerCase();
+  const hit=x=>!q||[x.id,x.answer,x.promptText,x.promptCategory,x.recipientId,x.senderUid,x.responseId,x.reporterUid].some(v=>String(v||"").toLowerCase().includes(q));
+  const repCount={};P.forEach(r=>{repCount[r.responseId]=(repCount[r.responseId]||0)+1;});
+
+  if(view==="msgs"){
+    const list=R.filter(hit);
+    unfList.replaceChildren(h("div",{class:"count"},list.length+" of "+R.length+" messages · newest first"),
+      ...(list.length?list.map(x=>msgCard(x,repCount[x.id]||0)):[h("p",{class:"empty"},"No messages.")]));
+  }else if(view==="links"){
+    const g={};
+    R.forEach(x=>{const k=x.recipientId||"?";const o=g[k]||(g[k]={id:k,n:0,last:null,senders:new Set(),reps:0});o.n++;o.senders.add(x.senderUid);o.reps+=repCount[x.id]||0;if(!o.last)o.last=x.createdAt;});
+    const list=Object.values(g).filter(o=>!q||o.id.toLowerCase().includes(q));
+    unfList.replaceChildren(h("div",{class:"count"},list.length+" links that received messages"),
+      ...(list.length?list.map(o=>h("article",{class:"card"},
+        h("div",{class:"row"},h("div",{class:"av"},"🔗"),h("div",{class:"grow"},
+          h("div",{class:"nm"},"Link "+shortId(o.id),o.reps>0&&h("span",{class:"tag red"},"🚩 "+o.reps)),
+          h("div",{class:"meta mono"},o.id))),
+        h("div",{class:"stats",style:"margin-top:10px"},h("span",null,"💌 "+o.n+" messages"),h("span",null,"🕵️ "+o.senders.size+" senders"),h("span",null,"🕒 last: "+fmt(o.last))),
+        h("div",{class:"acts"},
+          btn("🔗 Copy invite link",()=>copyTxt(inviteLink(o.id),"Invite link copied ✓")),
+          btn("📋 Copy ID",()=>copyTxt(o.id,"ID copied ✓")),
+          btn("📨 View messages",()=>{S.uq=o.id;unfQ.value=o.id;S.uview="msgs";renderUnf();window.scrollTo({top:0});})))):[h("p",{class:"empty"},"No links used yet.")]));
+  }else{
+    const list=P.filter(r=>hit(r)||hit(R.find(x=>x.id===r.responseId)||{}));
+    unfList.replaceChildren(h("div",{class:"count"},list.length+" reports · newest first"),
+      ...(list.length?list.map(r=>{
+        const m=R.find(x=>x.id===r.responseId);
+        return h("article",{class:"card"},
+          h("div",{class:"row"},h("div",{class:"av"},"🚩"),h("div",{class:"grow"},
+            h("div",{class:"nm"},"Report",h("span",{class:"tag red"},r.reason||"reported")),
+            h("div",{class:"meta"},fmt(r.createdAt)+" · reporter "+shortId(r.reporterUid)))),
+          m?h("p",{class:"body clamp",onclick:e=>e.currentTarget.classList.toggle("clamp")},m.answer||""):h("p",{class:"meta",style:"margin:10px 0"},"Message already deleted."),
+          h("div",{class:"acts"},
+            m&&btn("📨 View message",()=>{S.uq=m.id;unfQ.value=m.id;S.uview="msgs";renderUnf();window.scrollTo({top:0});}),
+            m&&btn("🗑 Delete message",()=>delUnf(m,r),"red"),
+            btn("✓ Dismiss report",()=>run("Report dismissed",()=>db.collection("unfiltered_reports").doc(r.id).delete()))));
+      }):[h("p",{class:"empty"},"No reports 🎉")]));
+  }
+}
+function msgCard(x,reps){
+  return h("article",{class:"card"+(reps?"":"")},
+    h("div",{class:"row"},h("div",{class:"av"},"💌"),h("div",{class:"grow"},
+      h("div",{class:"nm"},(x.promptCategory||"message").replace(/^\w/,c=>c.toUpperCase()),
+        x.anonymous===false&&h("span",{class:"tag"},"not anonymous"),reps>0&&h("span",{class:"tag red"},"🚩 "+reps+" report"+(reps>1?"s":""))),
+      h("div",{class:"meta"},fmt(x.createdAt)+" · from "+shortId(x.senderUid)+" → to "+shortId(x.recipientId)))),
+    x.promptText&&x.promptId!=="custom"&&h("div",{class:"meta",style:"margin-top:10px;font-weight:700"},x.promptText),
+    h("p",{class:"body clamp",title:"Tap to expand",onclick:e=>e.currentTarget.classList.toggle("clamp")},x.answer||""),
+    h("div",{class:"acts"},
+      btn("📋 Sender ID",()=>copyTxt(x.senderUid,"Sender ID copied ✓")),
+      btn("📋 Recipient ID",()=>copyTxt(x.recipientId,"Recipient ID copied ✓")),
+      btn("🔗 Invite link",()=>copyTxt(inviteLink(x.recipientId),"Invite link copied ✓")),
+      btn("🗑 Delete",()=>delUnf(x,null),"red")));
+}
+function delUnf(m,rep){
+  if(!confirm("Delete this message for good?"))return;
+  run("Message deleted",async()=>{
+    await db.collection("unfiltered_responses").doc(m.id).delete();
+    const rs=(S.urep||[]).filter(r=>r.responseId===m.id);
+    for(const r of rs){try{await db.collection("unfiltered_reports").doc(r.id).delete();}catch(e){}}
+  });
 }
 
 /* ================= STATS ================= */
