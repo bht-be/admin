@@ -40,6 +40,7 @@ textarea.inp{resize:vertical;min-height:110px;line-height:1.5}
 .btn.sm.red{color:var(--red);background:rgba(239,68,68,.1)}
 .btn.sm.on{background:rgba(255,68,88,.12);color:var(--flame)}
 .btn.ghost{background:var(--bg);color:var(--text);box-shadow:none}
+.tag.green{background:rgba(31,157,69,.14);color:var(--green)}
 .btn.team{background:var(--team);box-shadow:0 8px 20px -8px rgba(124,58,237,.55)}
 
 /* shell */
@@ -108,6 +109,7 @@ h3{font-size:15px;margin:6px 2px 10px}
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script>(function(){var a=!window.firebase,f=a||!firebase.firestore,u=a||!firebase.auth,b="https://cdn.jsdelivr.net/npm/firebase@10.7.0/firebase-";function w(n){document.write('<script src="'+b+n+'-compat.js"><\/script>');}if(a)w("app");if(f)w("firestore");if(u)w("auth");})();</script>
 <script>
 "use strict";
 /* ================= config ================= */
@@ -117,6 +119,7 @@ const TZ="Africa/Casablanca";            // times are shown in Moroccan time
 
 /* A separate named app keeps the admin login apart from the anonymous visitor
    session of the public site, even when both pages share the same origin. */
+if(typeof firebase==="undefined"){document.getElementById("app").innerHTML='<div class="login"><div class="lcard"><div class="brand big">BHT<span>admin</span></div><p class="muted">Can’t connect right now. Check your internet connection, turn off any blocker, then refresh.</p><button class="btn" type="button" onclick="location.reload()">Refresh</button></div></div>';throw new Error("offline");}
 const fbApp=firebase.initializeApp(FIREBASE_CONFIG,"bht-admin");
 const auth=firebase.auth(fbApp);
 const db=firebase.firestore(fbApp);
@@ -166,7 +169,7 @@ async function run(okMsg,fn){
 }
 
 /* ================= state ================= */
-const S={tab:"posts",posts:[],q:"",cpost:"",comments:[],reply:null,chat:[],presence:[],offset:0,unsubs:[],timers:[],selSig:""};
+const S={unf:false,tab:"posts",posts:[],q:"",cpost:"",comments:[],reply:null,chat:[],presence:[],offset:0,unsubs:[],timers:[],selSig:""};
 const now=()=>Date.now()+S.offset;
 const presOn=u=>{const t=u&&u.ts&&u.ts.toMillis?u.ts.toMillis():0;if(!t||u.online===false)return false;const d=now()-t;return d<75000&&d>-120000;};
 async function syncClock(){
@@ -218,7 +221,7 @@ function showLogin(msg){
 }
 
 /* ================= app shell ================= */
-const TABS=[["posts","Posts"],["new","New post"],["comments","Comments"],["chat","Chat"],["stats","Stats"]];
+const TABS=[["posts","Posts"],["new","New post"],["comments","Comments"],["chat","Chat"],["unf","Unfiltered"],["stats","Stats"]];
 let panels={},tabBtns={};
 let postList,postCount,cSel,cList,cText,chips,replyBar,chatList,chatText,statsEl;
 
@@ -231,7 +234,7 @@ function setTab(t){
 
 function startApp(user){
   stopAll();
-  panels={posts:buildPosts(),new:buildNew(),comments:buildComments(),chat:buildChat(),stats:buildStats()};
+  panels={posts:buildPosts(),new:buildNew(),comments:buildComments(),chat:buildChat(),unf:buildUnf(),stats:buildStats()};
   tabBtns={};
   TABS.forEach(([k,l])=>{tabBtns[k]=h("button",{type:"button",class:"tab",onclick:()=>setTab(k)},l);});
   appEl.replaceChildren(
@@ -254,6 +257,10 @@ function startApp(user){
   listen(db.collection("chat_messages").orderBy("ts","desc").limit(100),snap=>{
     S.chat=snap.docs.map(d=>({id:d.id,...d.data()}));
     renderChat();
+  });
+  listen(db.collection("site_settings").doc("unfiltered"),snap=>{
+    S.unf=!!(snap.exists&&snap.data().visible===true);
+    renderUnf();
   });
   listen(db.collection("chat_presence").orderBy("ts","desc").limit(150),snap=>{
     S.presence=snap.docs.map(d=>({uid:d.id,...d.data()}));
@@ -497,6 +504,27 @@ function renderChat(){
 function removeChatMsg(m){
   if(!confirm("Remove this message for everyone?"))return;
   run("Message removed",()=>db.collection("chat_messages").doc(m.id).update({removed:true,removedBy:"admin",text:"",reactions:{}}));
+}
+
+/* ================= UNFILTERED (show / hide) ================= */
+let unfEl=null;
+function buildUnf(){unfEl=h("div");renderUnf();return h("section",{class:"panel"},unfEl);}
+function renderUnf(){
+  if(!unfEl)return;
+  const on=S.unf===true;
+  const go=h("button",{class:"btn "+(on?"ghost":"team"),type:"button"},on?"🙈 Hide Unfiltered":"👁 Show Unfiltered");
+  go.addEventListener("click",async()=>{
+    go.disabled=true;
+    await run(on?"Unfiltered is now hidden":"Unfiltered is now visible ✓",()=>db.collection("site_settings").doc("unfiltered").set({visible:!on,updatedAt:FV.serverTimestamp()},{merge:true}));
+    go.disabled=false;
+  });
+  unfEl.replaceChildren(h("div",{class:"form"},
+    h("div",{class:"row"},
+      h("div",{class:"av"},"🫣"),
+      h("div",{class:"grow"},
+        h("div",{class:"nm"},"BHT Unfiltered",h("span",{class:"tag "+(on?"green":"red")},on?"🟢 visible":"🙈 hidden")),
+        h("div",{class:"meta"},on?"The link is shown in the site header and the page is open.":"The link is removed from the site header and the page shows a “not available” message."))),
+    go));
 }
 
 /* ================= STATS ================= */
